@@ -1,7 +1,7 @@
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version (16.2.4) has breaking changes — APIs, conventions, and file structure may differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
 ## Project overview
@@ -9,36 +9,53 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Task Manager with AI — a Sprint 0 learning project built on Next.js 16 (App Router). The scope exercises:
 
 - App Router (routes, layouts, dynamic routes)
-- Server Components (listing tasks)
-- Route Handlers (tasks API under `app/api/**/route.ts`)
-- Server Actions (creating and deleting tasks)
-- Suspense + Streaming (task list and AI response)
-- Client Components (form, AI button)
-- A streaming AI "generate description" feature powered by the Vercel AI SDK
+- Server Components (task list, task detail)
+- Route Handlers (`app/api/describe-task/route.ts`)
+- Server Actions (`features/tasks/actions.ts`)
+- Suspense + Streaming (task list skeleton, AI response stream)
+- Client Components (form, delete, AI button)
+- Vercel AI SDK streaming via `streamText` + `toUIMessageStreamResponse`
 
-All user-facing prose and identifiers are in English.
+All code, UI strings, and comments are in English.
+
+## Directory layout
+
+```
+app/                    Routing + thin page wrappers only
+  api/describe-task/    POST — streaming AI endpoint
+  tasks/                /tasks list + /tasks/[id] detail
+features/
+  tasks/                types, store, actions, components
+  ai/                   prompts, stream parser, client components
+```
+
+- Routes under `app/` import from `@/features/<name>/…`. Do not put feature code directly in `app/`.
+- `features/<name>/components/` holds feature-owned components. Shared cross-feature UI would go in a top-level `components/` folder (not created yet — add only when actually needed).
 
 ## Conventions
 
-- **Server Components by default.** Add `"use client"` only where interactivity forces it (forms with local state, the AI button).
-- **Data access** goes through `lib/tasks.ts`. Do not add parallel data layers.
-- **Mutations** go through Server Actions in `app/tasks/actions.ts`. Do not call the store directly from Client Components.
-- **Route Handlers** live at `app/api/**/route.ts` and are the right place for streaming responses (the AI endpoint).
-- **Suspense** boundaries wrap async UI — the task list and the AI streaming output.
-- **Persistence** is in-memory for now. A real DB (Supabase or Neon) arrives in a later sprint; keep the `lib/tasks.ts` surface stable so the swap is painless.
+- **Server Components by default.** Add `"use client"` only where interactivity forces it (the form, delete button, and AI button).
+- **Data access** goes through `features/tasks/store.ts`. Do not add parallel data layers.
+- **Mutations** go through Server Actions in `features/tasks/actions.ts`. Do not call the store directly from Client Components.
+- **Route Handlers** live at `app/api/**/route.ts` and are the right place for streaming responses.
+- **Suspense** boundaries wrap async UI (task list, streaming AI output).
+- **Types** live in `features/<name>/types.ts`. Prefer `interface` for object shapes; export them from the feature root.
+- **Styling** uses Tailwind v4 tokens declared in `app/globals.css` (`brand-*`, `surface*`, `ink*`, `border`). Don't hardcode raw hex colors in components.
+- **Persistence** is in-memory for now. A real DB arrives in a later sprint — keep the `features/tasks/store.ts` surface stable so the swap is painless.
+- **No incidental comments.** Only add a comment when the *why* is non-obvious (invariant, workaround, subtle SDK behavior). Keep comments in English.
 
 ## AI feature (implemented)
 
-The streaming "generate steps" button is wired up. Current shape:
+The streaming "Generate steps with AI" button is wired up end-to-end.
 
-- **Dependencies:** `ai`, `@ai-sdk/openai` (also `@ai-sdk/anthropic` installed for experimentation).
-- **Endpoint:** `app/api/describe-task/route.ts` — `POST` handler that calls `streamText({ model: openai('gpt-4o-mini'), prompt })` and returns `result.toUIMessageStreamResponse()`.
-- **Client:** `app/tasks/[id]/AIDescriptionButton.tsx` — a Client Component that POSTs `{ title, description }` and reads the response body directly, parsing `data: {"type":"text-delta", ...}` lines token-by-token into local state.
-- **Model:** `gpt-4o-mini` by default. If swapping providers, use `@ai-sdk/anthropic` and adjust the `model` argument; do not fork the endpoint.
-- **Secrets:** `OPENAI_API_KEY` in `.env.local`. Never commit `.env*.local`.
+- **Dependencies:** `ai`, `@ai-sdk/openai` (and `@ai-sdk/anthropic`, installed for experimentation).
+- **Endpoint:** `app/api/describe-task/route.ts` — `POST` handler. Uses `streamText({ model: openai('gpt-4o-mini'), prompt })` with the prompt built by `features/ai/prompts.ts#buildStepsPrompt`. Returns `result.toUIMessageStreamResponse()`.
+- **Client:** `features/ai/components/AiStepsButton.tsx` — Client Component that POSTs `{ title, description }` to the endpoint and consumes the stream via `features/ai/stream.ts#readTextDeltas`, an async iterator that parses `data: {"type":"text-delta", ...}` SSE lines with a newline-buffered reader.
+- **Model:** `gpt-4o-mini` by default. To swap providers, change the `model` argument only — do not fork the endpoint.
+- **Secrets:** `OPENAI_API_KEY` in `.env.local`. `.env.example` documents the available keys. `.env*.local` is gitignored; `.env.example` is whitelisted.
 - **Privacy:** do not log prompt or response bodies that could contain user task content.
 
-When modifying the AI feature, verify the current `ai` / `@ai-sdk/openai` API via Context7 before changing stream helpers — the SDK evolves quickly (`toUIMessageStreamResponse`, `toDataStreamResponse`, `toAIStreamResponse` have swapped in/out across versions). The hand-rolled stream reader in `AIDescriptionButton` can be replaced by `useCompletion` / `useChat` from `ai/react` once the installed API is confirmed.
+When modifying the AI feature, verify the current `ai` / `@ai-sdk/openai` API via Context7 before changing stream helpers — the SDK evolves quickly (`toUIMessageStreamResponse`, `toDataStreamResponse`, `toAIStreamResponse` have swapped in/out across versions). The hand-rolled parser in `features/ai/stream.ts` can be replaced by `useCompletion` / `useChat` from `ai/react` once the installed API is confirmed.
 
 ## Before writing code
 

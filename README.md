@@ -1,41 +1,29 @@
 # Task Manager with AI
 
-A small Next.js 16 learning project: a task manager where you can create, list, and delete tasks, plus a button that streams AI-generated steps to complete each task.
+A small Next.js 16 project built as a Sprint 0 learning exercise: a clean, white-and-orange task manager where you can create, list, open, and delete tasks, plus a button that streams AI-generated steps to help you complete each one.
 
-> **Status:** working end-to-end. CRUD scaffold + streaming AI button are wired up against an in-memory store. Persistent storage is the next sprint.
+## Feature tour
 
-## Why this project
-
-Sprint 0 goals — get hands-on with the pieces of the modern Next.js App Router and a real introduction to the Vercel AI SDK, without being yet another generic chat tutorial.
+- **Home** — branded landing with a single call-to-action into the app.
+- **`/tasks`** — Server Component list with a Server Actions form for creation, client-side deletion, and Suspense-backed loading skeletons.
+- **`/tasks/[id]`** — task detail page with an **AI "Generate steps"** button that streams tokens from a Route Handler.
+- **Streaming API** — `POST /api/describe-task` uses the Vercel AI SDK (`streamText` + `openai('gpt-4o-mini')`) and is consumed on the client with an async-iterator SSE parser.
 
 ## Stack
 
-- **Framework:** Next.js 16.2.4 (App Router)
-- **Runtime:** React 19.2, TypeScript 5
-- **Styling:** Tailwind CSS 4
-- **Tooling:** ESLint 9
-- **AI:** Vercel AI SDK (`ai`) with `@ai-sdk/openai` (and `@ai-sdk/anthropic` also installed)
-
-## What's implemented
-
-- In-memory task store at `lib/tasks.ts` (`getTasks`, `getTaskById`, `createTask`, `deleteTask`)
-- Server Actions at `app/tasks/actions.ts` (`createTaskAction`, `deleteTaskAction`)
-- `/tasks` Server Component page with Suspense-backed loading UI
-- `/tasks/[id]` dynamic task detail page (Server Component)
-- Streaming Route Handler at `app/api/describe-task/route.ts` using `streamText` + `openai('gpt-4o-mini')`, returned with `toUIMessageStreamResponse()`
-- Client Component `AIDescriptionButton` that POSTs to the endpoint and renders the streamed deltas token-by-token
-
-## Planned
-
-- Persistent storage (Supabase or Neon) replacing `lib/tasks.ts`
-- Task edit flow and completion toggle
-- Optional: replace the hand-rolled stream reader with `useCompletion` / `useChat` from the AI SDK
+| Area | Choice |
+| --- | --- |
+| Framework | Next.js **16.2.4** (App Router, Turbopack) |
+| Runtime | React 19.2, TypeScript 5 |
+| Styling | Tailwind CSS 4 with `@theme` tokens — white surface + orange brand |
+| AI | Vercel AI SDK (`ai`) with `@ai-sdk/openai` (Anthropic also installed) |
+| Tooling | ESLint 9 |
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.local.example .env.local   # then fill in OPENAI_API_KEY
+cp .env.example .env.local      # then fill in OPENAI_API_KEY
 npm run dev
 ```
 
@@ -56,27 +44,71 @@ The AI button requires `OPENAI_API_KEY` in `.env.local`.
 
 ```
 app/
-  layout.tsx
-  page.tsx
-  globals.css
+  layout.tsx                        # Root layout (metadata, font, theme body)
+  page.tsx                          # Home hero
+  globals.css                       # Tailwind v4 @theme tokens (brand + ink)
   api/
-    describe-task/
-      route.ts              # POST — streaming AI endpoint
+    describe-task/route.ts          # POST — streaming AI endpoint
   tasks/
-    actions.ts              # Server Actions (create, delete)
-    layout.tsx
-    loading.tsx             # Suspense fallback for the list
-    page.tsx                # /tasks — Server Component
-    TaskForm.tsx            # Client Component
-    TaskList.tsx
-    DeleteTaskButton.tsx    # Client Component
-    [id]/
-      page.tsx              # /tasks/[id]
-      AIDescriptionButton.tsx  # Client Component — streams from /api/describe-task
-lib/
-  tasks.ts                  # In-memory task store
+    layout.tsx                      # Branded header shell for the app
+    page.tsx                        # /tasks — Server Component list
+    loading.tsx                     # Re-exports the shared skeleton
+    [id]/page.tsx                   # /tasks/[id]
+
+features/
+  tasks/
+    types.ts                        # Task + TaskFormState interfaces
+    store.ts                        # In-memory data layer (CRUD)
+    actions.ts                      # Server Actions (create, delete)
+    components/
+      TaskForm.tsx
+      TaskList.tsx
+      TaskItem.tsx
+      TaskStatusBadge.tsx
+      DeleteTaskButton.tsx
+      TasksSkeleton.tsx
+  ai/
+    prompts.ts                      # Prompt builder
+    stream.ts                       # SSE text-delta async iterator
+    components/
+      AiStepsButton.tsx             # Streaming client button
 ```
 
-## Contributing / AI agents
+### Why `features/`?
 
-This repo uses Next.js 16, which has breaking changes vs. older training data. Before changing anything, read `AGENTS.md` and the relevant guide in `node_modules/next/dist/docs/`.
+Co-locating types, data access, Server Actions, and components per feature keeps the `app/` directory focused on routing. Routes import from `@/features/<name>/…` and stay thin.
+
+## Theme
+
+Single canonical look — no dark-mode toggle. Palette is declared in `app/globals.css` via Tailwind v4's `@theme`:
+
+- `brand-50 … brand-900` (orange, primary actions, accents)
+- `surface`, `surface-muted` (whites)
+- `ink`, `ink-muted` (warm near-blacks)
+- `border`
+
+Use `bg-brand-500`, `text-brand-600`, `text-ink`, etc. directly in components.
+
+## Environment variables
+
+See `.env.example`.
+
+| Name | Required | Purpose |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | ✅ | Used by `POST /api/describe-task` |
+| `ANTHROPIC_API_KEY` | optional | Only if you swap the provider to `@ai-sdk/anthropic` |
+
+## Conventions
+
+- Server Components by default; `"use client"` only where needed (forms, AI button, delete button).
+- Data access through `features/tasks/store.ts`; mutations through Server Actions in `features/tasks/actions.ts`.
+- Streaming responses belong in Route Handlers (`app/api/**/route.ts`).
+- English everywhere — code, UI strings, comments.
+
+See `AGENTS.md` for the contributor / AI-agent guide (including the Next.js 16 breaking-changes warning and AI SDK conventions).
+
+## Roadmap
+
+- Persistent storage (Supabase or Neon) replacing the in-memory store
+- Task edit flow and completion toggle
+- Replace the hand-rolled stream reader with `useCompletion` / `useChat` from the AI SDK once the installed API surface is confirmed
