@@ -20,6 +20,7 @@ export default function TaskForm() {
   const [state, action, isPending] = useActionState(reducer, initialTaskFormState)
   const [classification, setClassification] = useState<TaskClassification | null>(null)
   const [classifying, startClassifying] = useTransition()
+  const [, startAction] = useTransition() // ← transición para el action
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
@@ -34,10 +35,12 @@ export default function TaskForm() {
 
     if (!title?.trim()) return
 
-    // 1. Crear la tarea via useActionState (dentro del form nativo)
-    action(formData)
+    // 1. Crear la tarea dentro de su propia transición
+    startAction(() => {
+      action(formData)
+    })
 
-    // 2. Clasificar en paralelo via useTransition
+    // 2. Clasificar en paralelo
     setClassification(null)
     startClassifying(async () => {
       const res = await fetch('/api/classify-task', {
@@ -109,13 +112,12 @@ export default function TaskForm() {
             <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-brand-50 text-brand-700 ring-1 ring-brand-200">
               {classification.category}
             </span>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${
-              classification.difficulty === 'hard'
+            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${classification.difficulty === 'hard'
                 ? 'bg-red-50 text-red-700 ring-red-200'
                 : classification.difficulty === 'medium'
-                ? 'bg-yellow-50 text-yellow-700 ring-yellow-200'
-                : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-            }`}>
+                  ? 'bg-yellow-50 text-yellow-700 ring-yellow-200'
+                  : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+              }`}>
               {classification.difficulty}
             </span>
             <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 ring-1 ring-gray-200">

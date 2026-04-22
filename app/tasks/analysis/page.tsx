@@ -64,9 +64,9 @@ export default async function TaskAnalysisPage() {
             Recomendaciones
           </h2>
           <ul className="space-y-3">
-            {analysis.recommendations.map((rec) => (
+            {analysis.recommendations.map((rec, index) => (
               <li
-                key={rec.taskId}
+                key={index}
                 className="flex items-start gap-3 text-sm"
               >
                 <span

@@ -1,71 +1,92 @@
+import { supabase } from '@/lib/supabase'
+import { generateEmbedding } from '@/lib/embeddings'
 import type { Task } from './types'
 
-// The store uses globalThis so that Server Actions, Server Components, and
-// Route Handlers all share the same in-memory instance across HMR reloads
-// and separate bundles. Delete this shim when swapping to a real DB.
-interface TaskStoreState {
-  tasks: Task[]
-  nextId: number
+// Convierte una fila de Supabase al tipo Task de tu app.
+// Supabase devuelve snake_case (created_at), tu tipo usa camelCase (createdAt).
+function rowToTask(row: Record<string, unknown>): Task {
+  return {
+    id: row.id as number,
+    title: row.title as string,
+    description: row.description as string,
+    completed: row.completed as boolean,
+    createdAt: new Date(row.created_at as string),
+  }
 }
 
-const globalRef = globalThis as unknown as { __taskStore?: TaskStoreState }
-
-const state: TaskStoreState = (globalRef.__taskStore ??= {
-  tasks: [
-    {
-      id: 1,
-      title: 'Learn App Router',
-      description: 'Complete Sprint 0 of the roadmap.',
-      completed: true,
-      createdAt: new Date(),
-    },
-    {
-      id: 2,
-      title: 'Learn the Vercel AI SDK',
-      description: 'Complete Sprint 1 of the roadmap.',
-      completed: false,
-      createdAt: new Date(),
-    },
-  ],
-  nextId: 3,
-})
-
-// Simulated latency so Suspense fallbacks are visible during development.
-const LIST_DELAY_MS = 600
-const READ_DELAY_MS = 300
-const WRITE_DELAY_MS = 400
-
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
 export async function getTasks(): Promise<Task[]> {
-  await wait(LIST_DELAY_MS)
-  return state.tasks
+  const { data, error } = await supabase
+    .from('tm_tasks')
+    .select('id, title, description, completed, created_at')
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(rowToTask)
 }
 
 export async function getTaskById(id: number): Promise<Task | null> {
-  await wait(READ_DELAY_MS)
-  return state.tasks.find(task => task.id === id) ?? null
+  const { data, error } = await supabase
+    .from('tm_tasks')
+    .select('id, title, description, completed, created_at')
+    .eq('id', id)
+    .single()
+
+  if (error) return null
+  return rowToTask(data)
 }
 
 export async function createTask(
   title: string,
   description: string,
 ): Promise<Task> {
-  await wait(WRITE_DELAY_MS)
+  // Generamos el embedding del texto combinado título + descripción.
+  // Lo combinamos para que la búsqueda semántica tenga más contexto.
+  const embedding = await generateEmbedding(`${title} ${description}`)
 
-  const task: Task = {
-    id: state.nextId++,
-    title,
-    description,
-    completed: false,
-    createdAt: new Date(),
-  }
+  const { data, error } = await supabase
+    .from('tm_tasks')
+    .insert({
+      title,
+      description,
+      // embedding es el vector de 1536 números que generó OpenAI.
+      // Supabase lo guarda en la columna vector(1536) que creaste.
+      embedding,
+    })
+    .select('id, title, description, completed, created_at')
+    .single()
 
-  state.tasks.push(task)
-  return task
+  if (error) throw new Error(error.message)
+  return rowToTask(data)
 }
 
 export async function deleteTask(id: number): Promise<void> {
-  await wait(READ_DELAY_MS)
-  state.tasks = state.tasks.filter(task => task.id !== id)
+  const { error } = await supabase
+    .from('tm_tasks')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+}
+
+// Búsqueda semántica — encuentra tareas por significado, no por palabras exactas.
+// Ejemplo: buscar "ejercicio físico" puede encontrar "Ir al gimnasio" aunque
+// no contenga esas palabras exactas.
+export async function searchSimilarTasks(
+  query: string,
+  limit: number = 5,
+): Promise<Task[]> {
+  // 1. Convertimos la búsqueda en vector
+  const queryEmbedding = await generateEmbedding(query)
+
+  // 2. Le pedimos a Supabase que encuentre las tareas cuyos vectores
+  //    son más cercanos al vector de búsqueda.
+  //    match_tm_tasks es una función SQL que crearemos en el Paso 5.
+  const { data, error } = await supabase.rpc('match_tm_tasks', {
+    query_embedding: queryEmbedding,
+    match_threshold: 0.3, // similitud mínima del 30% — filtra resultados muy diferentes
+    match_count: limit,
+  })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(rowToTask)
 }

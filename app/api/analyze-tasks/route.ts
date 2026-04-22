@@ -14,11 +14,11 @@ const TaskAnalysisSchema = z.object({
   estimatedTotalHours: z.number().describe('Estimación total de horas para completar todo'),
   recommendations: z.array(
     z.object({
-      taskId: z.number(),
+      taskId: z.number().describe('ID único de la tarea — no repitas el mismo ID dos veces'),
       action: z.string().describe('Qué hacer con esta tarea'),
       priority: z.enum(['high', 'medium', 'low']),
     })
-  ),
+  ).describe('Una recomendación por tarea — sin duplicar taskId'),
   productivityScore: z.number().min(0).max(100).describe('Score del 0 al 100 basado en tareas completadas'),
 })
 

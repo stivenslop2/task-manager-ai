@@ -1,7 +1,7 @@
-import { convertToModelMessages, streamText, UIMessage, tool, stepCountIs } from 'ai'
+import { convertToModelMessages, streamText, UIMessage, stepCountIs } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
-import { getTasks, getTaskById, createTask } from '@/features/tasks/store'
+import { getTasks, getTaskById, createTask, searchSimilarTasks } from '@/features/tasks/store'
 
 export const maxDuration = 30
 
@@ -11,14 +11,35 @@ export async function POST(req: Request) {
   const result = streamText({
     model: openai('gpt-4o-mini'),
     system: `Eres un asistente de productividad experto.
-Tienes acceso a las tareas del usuario y puedes consultarlas o crear nuevas.
-Cuando el usuario pregunte por sus tareas, usa las tools disponibles.
+Tienes acceso a las tareas del usuario.
+Cuando el usuario pregunte por tareas, usa PRIMERO searchTasks para buscar
+por contexto semántico antes de usar getTasks para listar todo.
 Responde siempre en el mismo idioma que el usuario.`,
     messages: await convertToModelMessages(messages),
-    stopWhen: stepCountIs(5), // ← reemplaza maxSteps
+    stopWhen: stepCountIs(5),
     tools: {
+      // Nueva tool — búsqueda semántica
+      searchTasks: {
+        description: `Busca tareas por significado semántico. 
+Úsala cuando el usuario mencione un tema, contexto o tipo de tarea.
+Ejemplo: "tareas de programación", "cosas pendientes de salud", "tareas difíciles"`,
+        inputSchema: z.object({
+          query: z.string().describe('El tema o contexto a buscar'),
+          limit: z.number().optional().describe('Máximo de resultados, default 5'),
+        }),
+        execute: async ({ query, limit }: { query: string; limit?: number }) => {
+          const tasks = await searchSimilarTasks(query, limit ?? 5)
+          console.log('Tasks: ', tasks);
+          
+          if (tasks.length === 0) {
+            return { message: 'No encontré tareas relacionadas con ese tema' }
+          }
+          return tasks
+        },
+      },
+
       getTasks: {
-        description: 'Obtiene la lista de todas las tareas del usuario',
+        description: 'Obtiene la lista completa de todas las tareas. Úsala solo cuando el usuario quiera ver TODAS sus tareas.',
         inputSchema: z.object({}),
         execute: async () => await getTasks(),
       },
