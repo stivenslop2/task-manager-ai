@@ -20,6 +20,7 @@ export default function HomePage() {
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
+
           <Link
             href="/tasks"
             className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-600 active:bg-brand-700"
@@ -35,6 +36,9 @@ export default function HomePage() {
           >
             View on GitHub
           </a>
+          <Link href="/chat" className="inline-flex items-center gap-2 ...">
+            → AI Chat Assistant
+          </Link>
         </div>
       </section>
     </main>
