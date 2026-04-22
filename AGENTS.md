@@ -27,15 +27,18 @@ All user-facing prose and identifiers are in English.
 - **Suspense** boundaries wrap async UI — the task list and the AI streaming output.
 - **Persistence** is in-memory for now. A real DB (Supabase or Neon) arrives in a later sprint; keep the `lib/tasks.ts` surface stable so the swap is painless.
 
-## AI feature guidance (planned)
+## AI feature (implemented)
 
-The streaming description button is not built yet. When implementing it:
+The streaming "generate steps" button is wired up. Current shape:
 
-- **Dependencies:** `ai` and `@ai-sdk/openai`.
-- **Endpoint:** `app/api/tasks/[id]/describe/route.ts`. Use `streamText` from `ai` with `openai(...)` from `@ai-sdk/openai`, and return the stream with the helper appropriate to the installed AI SDK version.
-- **Client:** a Client Component button that consumes the stream (e.g. `useCompletion` or reading the response body directly). Verify the exact API against the installed version via Context7 before writing code.
-- **Secrets:** put `OPENAI_API_KEY` in `.env.local`. Ensure `.gitignore` covers `.env*.local` before committing.
+- **Dependencies:** `ai`, `@ai-sdk/openai` (also `@ai-sdk/anthropic` installed for experimentation).
+- **Endpoint:** `app/api/describe-task/route.ts` — `POST` handler that calls `streamText({ model: openai('gpt-4o-mini'), prompt })` and returns `result.toUIMessageStreamResponse()`.
+- **Client:** `app/tasks/[id]/AIDescriptionButton.tsx` — a Client Component that POSTs `{ title, description }` and reads the response body directly, parsing `data: {"type":"text-delta", ...}` lines token-by-token into local state.
+- **Model:** `gpt-4o-mini` by default. If swapping providers, use `@ai-sdk/anthropic` and adjust the `model` argument; do not fork the endpoint.
+- **Secrets:** `OPENAI_API_KEY` in `.env.local`. Never commit `.env*.local`.
 - **Privacy:** do not log prompt or response bodies that could contain user task content.
+
+When modifying the AI feature, verify the current `ai` / `@ai-sdk/openai` API via Context7 before changing stream helpers — the SDK evolves quickly (`toUIMessageStreamResponse`, `toDataStreamResponse`, `toAIStreamResponse` have swapped in/out across versions). The hand-rolled stream reader in `AIDescriptionButton` can be replaced by `useCompletion` / `useChat` from `ai/react` once the installed API is confirmed.
 
 ## Before writing code
 

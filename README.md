@@ -1,8 +1,8 @@
 # Task Manager with AI
 
-A small Next.js 16 learning project: a task manager where you can create, list, and delete tasks, with a button that uses streaming to generate task descriptions with AI.
+A small Next.js 16 learning project: a task manager where you can create, list, and delete tasks, plus a button that streams AI-generated steps to complete each task.
 
-> **Status:** in progress. The CRUD scaffold (in-memory store + Server Actions) is in place. The AI streaming feature, Route Handlers, and the `/tasks` page are planned.
+> **Status:** working end-to-end. CRUD scaffold + streaming AI button are wired up against an in-memory store. Persistent storage is the next sprint.
 
 ## Why this project
 
@@ -14,29 +14,34 @@ Sprint 0 goals — get hands-on with the pieces of the modern Next.js App Router
 - **Runtime:** React 19.2, TypeScript 5
 - **Styling:** Tailwind CSS 4
 - **Tooling:** ESLint 9
-- **AI (planned):** Vercel AI SDK (`ai`) + `@ai-sdk/openai`
+- **AI:** Vercel AI SDK (`ai`) with `@ai-sdk/openai` (and `@ai-sdk/anthropic` also installed)
 
-## What's implemented today
+## What's implemented
 
 - In-memory task store at `lib/tasks.ts` (`getTasks`, `getTaskById`, `createTask`, `deleteTask`)
 - Server Actions at `app/tasks/actions.ts` (`createTaskAction`, `deleteTaskAction`)
-- Base layout and home page (`app/layout.tsx`, `app/page.tsx`)
+- `/tasks` Server Component page with Suspense-backed loading UI
+- `/tasks/[id]` dynamic task detail page (Server Component)
+- Streaming Route Handler at `app/api/describe-task/route.ts` using `streamText` + `openai('gpt-4o-mini')`, returned with `toUIMessageStreamResponse()`
+- Client Component `AIDescriptionButton` that POSTs to the endpoint and renders the streamed deltas token-by-token
 
 ## Planned
 
-- `/tasks` page as a Server Component with `Suspense` while the list loads
-- Route Handlers under `app/api/tasks/**/route.ts`
-- AI "Generate description" button — a Client Component that calls a streaming Route Handler (`app/api/tasks/[id]/describe/route.ts`) backed by `streamText` from the AI SDK
-- Persistent storage (Supabase or Neon) in a later sprint
+- Persistent storage (Supabase or Neon) replacing `lib/tasks.ts`
+- Task edit flow and completion toggle
+- Optional: replace the hand-rolled stream reader with `useCompletion` / `useChat` from the AI SDK
 
 ## Getting started
 
 ```bash
 npm install
+cp .env.local.example .env.local   # then fill in OPENAI_API_KEY
 npm run dev
 ```
 
 Open http://localhost:3000.
+
+The AI button requires `OPENAI_API_KEY` in `.env.local`.
 
 ## Scripts
 
@@ -54,10 +59,22 @@ app/
   layout.tsx
   page.tsx
   globals.css
+  api/
+    describe-task/
+      route.ts              # POST — streaming AI endpoint
   tasks/
-    actions.ts        # Server Actions
+    actions.ts              # Server Actions (create, delete)
+    layout.tsx
+    loading.tsx             # Suspense fallback for the list
+    page.tsx                # /tasks — Server Component
+    TaskForm.tsx            # Client Component
+    TaskList.tsx
+    DeleteTaskButton.tsx    # Client Component
+    [id]/
+      page.tsx              # /tasks/[id]
+      AIDescriptionButton.tsx  # Client Component — streams from /api/describe-task
 lib/
-  tasks.ts            # In-memory task store
+  tasks.ts                  # In-memory task store
 ```
 
 ## Contributing / AI agents
