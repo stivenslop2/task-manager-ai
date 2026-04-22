@@ -6,7 +6,7 @@ const geist = Geist({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Task Manager',
-  description: 'Task Manager con AI y App Router',
+  description: 'Task manager with streaming AI descriptions, built on Next.js App Router.',
 }
 
 export default function RootLayout({
@@ -15,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
-      <body className={geist.className}>
+    <html lang="en">
+      <body className={`${geist.className} bg-surface text-ink`}>
         {children}
       </body>
     </html>

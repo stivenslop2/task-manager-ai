@@ -1,7 +1,8 @@
-import { getTaskById } from '@/lib/tasks'
-import { notFound } from 'next/navigation'
-import AIDescriptionButton from './AIDescriptionButton'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { getTaskById } from '@/features/tasks/store'
+import TaskStatusBadge from '@/features/tasks/components/TaskStatusBadge'
+import AiStepsButton from '@/features/ai/components/AiStepsButton'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -14,38 +15,36 @@ export default async function TaskDetailPage({ params }: Props) {
   if (!task) notFound()
 
   return (
-    <main className="p-8 max-w-2xl mx-auto">
+    <div className="space-y-6">
       <Link
         href="/tasks"
-        className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-block"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-brand-600 transition-colors"
       >
-        ← Volver a tareas
+        ← Back to tasks
       </Link>
 
-      <div className="bg-white border rounded-lg p-6">
-        <div className="flex items-start justify-between mb-4">
-          <h1 className="text-2xl font-bold">{task.title}</h1>
-          <span
-            className={`text-xs px-2 py-1 rounded-full ${
-              task.completed
-                ? 'bg-green-100 text-green-700'
-                : 'bg-yellow-100 text-yellow-700'
-            }`}
-          >
-            {task.completed ? 'Completada' : 'Pendiente'}
-          </span>
-        </div>
+      <article className="bg-white border border-border rounded-2xl p-6 shadow-sm">
+        <header className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">
+            {task.title}
+          </h1>
+          <TaskStatusBadge completed={task.completed} />
+        </header>
 
-        {task.description && (
-          <p className="text-gray-600 mb-6">{task.description}</p>
+        {task.description ? (
+          <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+            {task.description}
+          </p>
+        ) : (
+          <p className="mt-4 text-sm italic text-ink-muted">
+            No description provided.
+          </p>
         )}
 
-        {/* Botón que activa el streaming de IA */}
-        <AIDescriptionButton
-          title={task.title}
-          description={task.description}
-        />
-      </div>
-    </main>
+        <div className="mt-6 border-t border-border pt-6">
+          <AiStepsButton title={task.title} description={task.description} />
+        </div>
+      </article>
+    </div>
   )
 }
