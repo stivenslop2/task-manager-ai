@@ -39,6 +39,9 @@ export default function HomePage() {
           <Link href="/chat" className="inline-flex items-center gap-2 ...">
             → AI Chat Assistant
           </Link>
+          <Link href="/tasks/analysis">
+            → Análisis IA de tareas
+          </Link>
         </div>
       </section>
     </main>
