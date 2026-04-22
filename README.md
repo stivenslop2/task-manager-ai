@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Task Manager with AI
 
-## Getting Started
+A small Next.js 16 learning project: a task manager where you can create, list, and delete tasks, with a button that uses streaming to generate task descriptions with AI.
 
-First, run the development server:
+> **Status:** in progress. The CRUD scaffold (in-memory store + Server Actions) is in place. The AI streaming feature, Route Handlers, and the `/tasks` page are planned.
+
+## Why this project
+
+Sprint 0 goals — get hands-on with the pieces of the modern Next.js App Router and a real introduction to the Vercel AI SDK, without being yet another generic chat tutorial.
+
+## Stack
+
+- **Framework:** Next.js 16.2.4 (App Router)
+- **Runtime:** React 19.2, TypeScript 5
+- **Styling:** Tailwind CSS 4
+- **Tooling:** ESLint 9
+- **AI (planned):** Vercel AI SDK (`ai`) + `@ai-sdk/openai`
+
+## What's implemented today
+
+- In-memory task store at `lib/tasks.ts` (`getTasks`, `getTaskById`, `createTask`, `deleteTask`)
+- Server Actions at `app/tasks/actions.ts` (`createTaskAction`, `deleteTaskAction`)
+- Base layout and home page (`app/layout.tsx`, `app/page.tsx`)
+
+## Planned
+
+- `/tasks` page as a Server Component with `Suspense` while the list loads
+- Route Handlers under `app/api/tasks/**/route.ts`
+- AI "Generate description" button — a Client Component that calls a streaming Route Handler (`app/api/tasks/[id]/describe/route.ts`) backed by `streamText` from the AI SDK
+- Persistent storage (Supabase or Neon) in a later sprint
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build |
+| `npm start` | Run the production build |
+| `npm run lint` | Lint the project |
 
-## Learn More
+## Project layout
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+  layout.tsx
+  page.tsx
+  globals.css
+  tasks/
+    actions.ts        # Server Actions
+lib/
+  tasks.ts            # In-memory task store
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing / AI agents
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This repo uses Next.js 16, which has breaking changes vs. older training data. Before changing anything, read `AGENTS.md` and the relevant guide in `node_modules/next/dist/docs/`.
