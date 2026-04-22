@@ -68,12 +68,39 @@ export default function Chat() {
                   : 'bg-surface-muted text-ink border border-border'
               }`}
             >
-              {/* En v6 el contenido está en message.parts */}
-              {message.parts.map((part, i) =>
-                part.type === 'text' ? (
-                  <p key={i} className="whitespace-pre-wrap">{part.text}</p>
-                ) : null
-              )}
+              {message.parts.map((part, i) => {
+                if (part.type === 'text') {
+                  return (
+                    <p key={i} className="whitespace-pre-wrap">{part.text}</p>
+                  )
+                }
+
+                if (part.type.startsWith('tool-') && 'state' in part) {
+                  const isRunning =
+                    part.state === 'input-streaming' || part.state === 'input-available'
+                  const toolName = part.type.replace('tool-', '')
+
+                  return (
+                    <div
+                      key={i}
+                      className="mt-2 text-xs text-ink-muted bg-white border border-border rounded-lg px-3 py-2"
+                    >
+                      {isRunning ? (
+                        <span className="flex items-center gap-1">
+                          <span className="inline-block animate-spin">⚙️</span>
+                          Ejecutando {toolName}...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          ✅ {toolName} completado
+                        </span>
+                      )}
+                    </div>
+                  )
+                }
+
+                return null
+              })}
             </div>
           </div>
         ))}
