@@ -16,7 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${geist.className} bg-surface text-ink`}>
+      <body
+        className={`${geist.className} bg-surface text-ink`}
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>
