@@ -22,9 +22,17 @@ export async function* readTextDeltas(
 
       try {
         const payload = JSON.parse(line.slice(6))
-        if (payload.type === 'text-delta' && typeof payload.textDelta === 'string') {
-          yield payload.textDelta
-        }
+        if (payload.type !== 'text-delta') continue
+
+        // AI SDK versions differ: newer payloads expose `delta`, older ones `textDelta`.
+        const token =
+          typeof payload.delta === 'string'
+            ? payload.delta
+            : typeof payload.textDelta === 'string'
+              ? payload.textDelta
+              : null
+
+        if (token) yield token
       } catch {
         // Ignore unparseable lines — keep consuming the stream.
       }
