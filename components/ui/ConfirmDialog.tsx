@@ -40,7 +40,7 @@ export function ConfirmDialog({
       onClick={(e) => {
         if (e.target === ref.current) onClose()
       }}
-      className="backdrop:bg-black/40 rounded-xl p-0 border border-border shadow-pop max-w-sm w-full"
+      className="fixed inset-0 m-auto backdrop:bg-black/40 rounded-xl p-0 border border-border shadow-pop max-w-sm w-[calc(100%-2rem)] h-fit bg-white open:animate-fade-in"
     >
       <div className="p-5">
         <h2 className="text-base font-semibold text-ink">{title}</h2>

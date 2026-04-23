@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { analyzeTasks } from '@/features/ai/analysis'
 import { Card } from '@/components/ui'
 
@@ -18,23 +17,7 @@ export default async function TaskAnalysisPage() {
   const dash = (score / 100) * circumference
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-border bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <Link
-            href="/tasks"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-brand-600 transition-colors"
-          >
-            <span aria-hidden>←</span> Back to tasks
-          </Link>
-          <h1 className="text-sm font-semibold tracking-tight text-ink">
-            AI Task Analysis
-          </h1>
-          <span className="w-12" aria-hidden />
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-10 space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
         <div>
           <p className="text-[11px] font-semibold text-ink-soft uppercase tracking-wide">
             Structured output · generateText + Output.object
@@ -118,7 +101,6 @@ export default async function TaskAnalysisPage() {
             ))}
           </ul>
         </Card>
-      </main>
     </div>
   )
 }
