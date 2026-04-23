@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { readTextDeltas } from '../stream'
+import { Button, useToast } from '@/components/ui'
 
 interface Props {
   title: string
@@ -12,6 +13,7 @@ export default function AiStepsButton({ title, description }: Props) {
   const [text, setText] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   async function generateSteps() {
     setText('')
@@ -30,7 +32,7 @@ export default function AiStepsButton({ title, description }: Props) {
       }
 
       for await (const delta of readTextDeltas(res.body)) {
-        setText(prev => prev + delta)
+        setText((prev) => prev + delta)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -39,29 +41,41 @@ export default function AiStepsButton({ title, description }: Props) {
     }
   }
 
+  async function copy() {
+    await navigator.clipboard.writeText(text)
+    toast.show('Steps copied to clipboard', 'success')
+  }
+
+  const hasOutput = text.length > 0
+
   return (
-    <div className="mt-2">
-      <button
-        type="button"
-        onClick={generateSteps}
-        disabled={streaming}
-        className="inline-flex items-center gap-2 bg-brand-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-brand-600 active:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-      >
-        <SparkleIcon />
-        {streaming ? 'Generating steps…' : 'Generate steps with AI'}
-      </button>
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" onClick={generateSteps} disabled={streaming} leftIcon={<SparkleIcon />}>
+          {streaming ? 'Generating…' : hasOutput ? 'Regenerate' : 'Generate steps'}
+        </Button>
+        {hasOutput && !streaming && (
+          <Button type="button" variant="secondary" onClick={copy}>
+            Copy
+          </Button>
+        )}
+      </div>
 
       {error && (
-        <p className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          {error}
-        </p>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+          <p className="text-sm text-red-800">{error}</p>
+          <button
+            type="button"
+            onClick={generateSteps}
+            className="mt-1 text-xs font-medium text-red-700 underline hover:text-red-900"
+          >
+            Retry
+          </button>
+        </div>
       )}
 
-      {text && (
-        <div className="mt-4 p-4 bg-brand-50 border border-brand-200 rounded-xl">
-          <h3 className="text-sm font-semibold text-brand-900 mb-2">
-            AI-suggested steps
-          </h3>
+      {hasOutput && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-4 animate-fade-in">
           <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">
             {text}
             {streaming && (
@@ -70,18 +84,21 @@ export default function AiStepsButton({ title, description }: Props) {
           </p>
         </div>
       )}
+
+      {streaming && !hasOutput && (
+        <div className="rounded-xl border border-border bg-white p-4 overflow-hidden">
+          <div className="h-3 w-2/3 rounded bg-surface-subtle animate-shimmer" />
+          <div className="mt-2 h-3 w-4/5 rounded bg-surface-subtle animate-shimmer" />
+          <div className="mt-2 h-3 w-1/2 rounded bg-surface-subtle animate-shimmer" />
+        </div>
+      )}
     </div>
   )
 }
 
 function SparkleIcon() {
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
+    <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
       <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2zm7 12l.95 2.55L22.5 17.5l-2.55.95L19 21l-.95-2.55L15.5 17.5l2.55-.95L19 14z" />
     </svg>
   )
