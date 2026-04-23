@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
+import { ToastProvider } from '@/components/ui'
 
 const geist = Geist({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Task Manager',
-  description: 'Task manager with streaming AI descriptions, built on Next.js App Router.',
+  title: 'Task Manager AI',
+  description:
+    'Portfolio project demonstrating streaming text, tool calling, structured outputs, and RAG with pgvector on Next.js 16.',
 }
 
 export default function RootLayout({
@@ -17,10 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geist.className} bg-surface text-ink`}
+        className={`${geist.className} bg-surface-muted text-ink`}
         suppressHydrationWarning
       >
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   )
