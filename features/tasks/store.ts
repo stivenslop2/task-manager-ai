@@ -2,8 +2,6 @@ import { supabase } from '@/lib/supabase'
 import { generateEmbedding } from '@/lib/embeddings'
 import type { Task } from './types'
 
-// Convierte una fila de Supabase al tipo Task de tu app.
-// Supabase devuelve snake_case (created_at), tu tipo usa camelCase (createdAt).
 function rowToTask(row: Record<string, unknown>): Task {
   return {
     id: row.id as number,
@@ -39,8 +37,7 @@ export async function createTask(
   title: string,
   description: string,
 ): Promise<Task> {
-  // Generamos el embedding del texto combinado título + descripción.
-  // Lo combinamos para que la búsqueda semántica tenga más contexto.
+  // Embed title + description together so semantic search has richer context than title alone.
   const embedding = await generateEmbedding(`${title} ${description}`)
 
   const { data, error } = await supabase
@@ -48,8 +45,7 @@ export async function createTask(
     .insert({
       title,
       description,
-      // embedding es el vector de 1536 números que generó OpenAI.
-      // Supabase lo guarda en la columna vector(1536) que creaste.
+      // 1536-dim vector from OpenAI text-embedding-3-small; must match the vector(1536) column.
       embedding,
     })
     .select('id, title, description, completed, created_at')
@@ -68,22 +64,16 @@ export async function deleteTask(id: number): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
-// Búsqueda semántica — encuentra tareas por significado, no por palabras exactas.
-// Ejemplo: buscar "ejercicio físico" puede encontrar "Ir al gimnasio" aunque
-// no contenga esas palabras exactas.
 export async function searchSimilarTasks(
   query: string,
   limit: number = 5,
 ): Promise<Task[]> {
-  // 1. Convertimos la búsqueda en vector
   const queryEmbedding = await generateEmbedding(query)
 
-  // 2. Le pedimos a Supabase que encuentre las tareas cuyos vectores
-  //    son más cercanos al vector de búsqueda.
-  //    match_tm_tasks es una función SQL que crearemos en el Paso 5.
   const { data, error } = await supabase.rpc('match_tm_tasks', {
     query_embedding: queryEmbedding,
-    match_threshold: 0.3, // similitud mínima del 30% — filtra resultados muy diferentes
+    // 0.3 cosine similarity floor — empirically filters out unrelated tasks while keeping loose matches.
+    match_threshold: 0.3,
     match_count: limit,
   })
 
