@@ -46,17 +46,22 @@ body {
   color: var(--color-brand-900);
 }
 
-@layer base {
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  summary {
-    cursor: pointer;
-  }
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[role="button"],
+summary,
+[type="button"]:not(:disabled),
+[type="submit"]:not(:disabled),
+[type="reset"]:not(:disabled) {
+  cursor: pointer;
+}
 
-  button:disabled,
-  [role="button"][aria-disabled="true"] {
-    cursor: not-allowed;
-  }
+button:disabled,
+[type="button"]:disabled,
+[type="submit"]:disabled,
+[type="reset"]:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 @keyframes fade-in {
