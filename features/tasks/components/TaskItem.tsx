@@ -9,25 +9,27 @@ interface Props {
 
 export default function TaskItem({ task }: Props) {
   return (
-    <li className="group bg-white border border-border rounded-2xl p-4 shadow-sm hover:border-brand-300 hover:shadow-md transition flex items-start justify-between gap-4">
-      <div className="flex-1 min-w-0">
+    <li className="group bg-white border border-border rounded-xl shadow-card transition-all hover:border-brand-200 hover:shadow-card-hover">
+      <div className="flex items-start justify-between gap-3 p-4">
         <Link
           href={`/tasks/${task.id}`}
-          className="font-medium text-ink hover:text-brand-600 transition-colors"
+          className="flex-1 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-brand-400 rounded-md"
         >
-          {task.title}
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-ink truncate group-hover:text-brand-600 transition-colors">
+              {task.title}
+            </h3>
+            <TaskStatusBadge completed={task.completed} />
+          </div>
+          {task.description && (
+            <p className="mt-1 text-sm text-ink-muted line-clamp-2">
+              {task.description}
+            </p>
+          )}
         </Link>
 
-        {task.description && (
-          <p className="mt-1 text-sm text-ink-muted line-clamp-2">
-            {task.description}
-          </p>
-        )}
-
-        <TaskStatusBadge completed={task.completed} className="mt-3" />
+        <DeleteTaskButton id={task.id} title={task.title} />
       </div>
-
-      <DeleteTaskButton id={task.id} />
     </li>
   )
 }
