@@ -10,55 +10,51 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai('gpt-4o-mini'),
-    system: `Eres un asistente de productividad experto.
-Tienes acceso a las tareas del usuario.
-Cuando el usuario pregunte por tareas, usa PRIMERO searchTasks para buscar
-por contexto semántico antes de usar getTasks para listar todo.
-Responde siempre en el mismo idioma que el usuario.`,
+    system: `You are an expert productivity assistant with access to the user's tasks.
+When the user asks about tasks, FIRST use searchTasks for semantic/contextual lookups
+before falling back to getTasks to list everything.
+Always respond in English.`,
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(5),
     tools: {
-      // Nueva tool — búsqueda semántica
       searchTasks: {
-        description: `Busca tareas por significado semántico. 
-Úsala cuando el usuario mencione un tema, contexto o tipo de tarea.
-Ejemplo: "tareas de programación", "cosas pendientes de salud", "tareas difíciles"`,
+        description: `Search tasks by semantic meaning.
+Use this when the user mentions a topic, context, or type of task.
+Examples: "programming tasks", "pending health items", "hard tasks".`,
         inputSchema: z.object({
-          query: z.string().describe('El tema o contexto a buscar'),
-          limit: z.number().optional().describe('Máximo de resultados, default 5'),
+          query: z.string().describe('The topic or context to search for'),
+          limit: z.number().optional().describe('Max results, defaults to 5'),
         }),
         execute: async ({ query, limit }: { query: string; limit?: number }) => {
           const tasks = await searchSimilarTasks(query, limit ?? 5)
-          console.log('Tasks: ', tasks);
-          
           if (tasks.length === 0) {
-            return { message: 'No encontré tareas relacionadas con ese tema' }
+            return { message: 'No tasks matched that topic' }
           }
           return tasks
         },
       },
 
       getTasks: {
-        description: 'Obtiene la lista completa de todas las tareas. Úsala solo cuando el usuario quiera ver TODAS sus tareas.',
+        description: 'Returns the full list of tasks. Use only when the user wants to see ALL their tasks.',
         inputSchema: z.object({}),
         execute: async () => await getTasks(),
       },
       getTaskById: {
-        description: 'Obtiene el detalle de una tarea específica por su ID',
+        description: 'Returns the details of a specific task by ID.',
         inputSchema: z.object({
-          id: z.number().describe('El ID numérico de la tarea'),
+          id: z.number().describe('Numeric task ID'),
         }),
         execute: async ({ id }: { id: number }) => {
           const task = await getTaskById(id)
-          if (!task) return { error: `No se encontró la tarea con ID ${id}` }
+          if (!task) return { error: `Task with ID ${id} was not found` }
           return task
         },
       },
       createTask: {
-        description: 'Crea una nueva tarea para el usuario',
+        description: 'Creates a new task for the user.',
         inputSchema: z.object({
-          title: z.string().describe('El título de la tarea'),
-          description: z.string().describe('La descripción detallada'),
+          title: z.string().describe('Task title'),
+          description: z.string().describe('Detailed description'),
         }),
         execute: async ({ title, description }: { title: string; description: string }) => {
           const task = await createTask(title, description)
@@ -66,7 +62,7 @@ Ejemplo: "tareas de programación", "cosas pendientes de salud", "tareas difíci
         },
       },
       getTasksSummary: {
-        description: 'Resumen estadístico: total, completadas y pendientes',
+        description: 'Statistical summary: total, completed, and pending tasks.',
         inputSchema: z.object({}),
         execute: async () => {
           const tasks = await getTasks()

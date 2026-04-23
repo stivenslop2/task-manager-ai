@@ -29,14 +29,14 @@ export async function POST(request: Request) {
     output: Output.object({
       schema: TaskClassificationSchema,
     }),
-    prompt: `Clasifica esta tarea:
-Título: ${title}
-Descripción: ${description || 'Sin descripción'}
+    prompt: `Classify this task:
+Title: ${title}
+Description: ${description || 'No description'}
 
-Categorías disponibles: work, learning, personal, health
-Dificultades: easy, medium, hard
-Deadline sugerido: today, this-week, this-month, someday
-Genera máximo 3 tags relevantes y estima los minutos necesarios.`,
+Available categories: work, learning, personal, health
+Difficulty levels: easy, medium, hard
+Suggested deadline: today, this-week, this-month, someday
+Generate up to 3 relevant tags and estimate the minutes required.`,
   })
 
   return Response.json(output)
