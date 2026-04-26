@@ -1,188 +1,113 @@
 # Task Manager AI
 
-A production-style task manager that showcases the patterns I reach for when building LLM features: streaming text, tool-calling agents, structured outputs, and retrieval-augmented search over user data.
+> An AI-powered task manager with chat, classification, and semantic search.
 
-Built on Next.js 16 (App Router) with the Vercel AI SDK v6, Supabase + `pgvector`, and Tailwind v4.
+🔗 **[Live demo](https://task-manager-ai-staging.up.railway.app/)** · 📂 **[Portfolio](https://julianlopez.dev)** · 💻 **[Source on GitHub](https://github.com/stivenslop2/task-manager-ai)**
 
-> **Portfolio project** — Julian Lopez · AI Engineer
+---
+
+## The problem it solves
+
+Most personal task lists become noise within a week — too many entries, no priorities, and no easy way to find that thing you wrote down a month ago. Task Manager AI lets you brain-dump tasks in plain language, then uses an LLM to classify, prioritize, and recall them through chat or semantic search. It's a working showcase of the production patterns I use when shipping AI features into real product flows.
 
 ---
 
 ## AI techniques demonstrated
 
-| Technique | What it does here | Where to look |
-| --- | --- | --- |
-| **Streaming text generation** | Token-by-token "Generate steps" button on the task detail page. Uses `streamText` + `toUIMessageStreamResponse` and a hand-rolled SSE reader to demonstrate both sides of the wire. | `app/api/describe-task/route.ts`, `features/ai/stream.ts`, `features/ai/components/AiStepsButton.tsx` |
-| **Tool calling (agentic chat)** | Multi-step chat assistant that searches, reads, creates, and summarizes tasks. `stepCountIs(5)` caps the agent loop. | `app/api/chat/route.ts`, `features/chat/components/Chat.tsx` |
-| **Structured outputs with Zod** | Two endpoints return schema-validated JSON: task classification (category/difficulty/tags/deadline) and a full task-list analysis (priority task + recommendations + score). | `app/api/classify-task/route.ts`, `features/ai/analysis.ts` |
-| **RAG with pgvector** | Semantic search over tasks. On insert, the title+description is embedded with `text-embedding-3-small` (1536-dim) and stored alongside the row; the chat agent's `searchTasks` tool calls a Postgres function (`match_tm_tasks`) that ranks by cosine similarity. | `lib/embeddings.ts`, `features/tasks/store.ts`, `app/api/chat/route.ts` |
+| Technique | Implementation | Where to look |
+|-----------|----------------|---------------|
+| Streaming text generation | Token-by-token "Generate steps" via `streamText` + `toUIMessageStreamResponse`, consumed client-side by a hand-rolled SSE async iterator. | `app/api/describe-task/route.ts`, `features/ai/stream.ts` |
+| Tool-calling agent | Multi-step chat that searches, reads, creates, and summarizes tasks. `stepCountIs(5)` caps the agent loop. | `app/api/chat/route.ts`, `features/chat/components/Chat.tsx` |
+| Structured outputs (Zod) | Schema-validated classification (category / difficulty / tags / deadline) and full task-list analysis with priority + score. | `app/api/classify-task/route.ts`, `features/ai/analysis.ts` |
+| RAG with pgvector | On insert, title + description is embedded with `text-embedding-3-small` (1536-dim); the chat agent's `searchTasks` tool calls a Postgres function ranking by cosine similarity. | `lib/embeddings.ts`, `features/tasks/store.ts` |
 
 ---
 
 ## Stack
 
-| Area | Choice |
-| --- | --- |
-| Framework | **Next.js 16.2** (App Router, Turbopack, Server Actions, Route Handlers, Suspense streaming) |
-| Runtime | React 19, TypeScript 5 |
-| AI | Vercel AI SDK `ai` v6 + `@ai-sdk/openai` (`@ai-sdk/anthropic` installed as a drop-in alternative) |
-| Persistence | Supabase Postgres + `pgvector` extension |
-| Styling | Tailwind CSS 4 with `@theme` tokens (white surface + orange brand) |
-| Tooling | ESLint 9 |
+- **Framework:** Next.js 16 (App Router, Turbopack, Server Actions, Suspense streaming)
+- **Runtime:** React 19, TypeScript 5
+- **AI:** Vercel AI SDK v6 with `@ai-sdk/openai`; `@anthropic-ai/sdk` direct for image analysis
+- **Database:** Supabase Postgres + `pgvector` extension
+- **Styling:** Tailwind CSS 4 with `@theme` tokens
 
 ---
 
 ## Architecture
 
-```
-             ┌───────────────────────────────┐
-  Client ──► │  Server Component / Client    │ ──► Server Action ──► features/tasks/store.ts
-             │  (app/ routes, features/)     │
-             └──────────────┬────────────────┘
-                            │ streams / JSON
-                            ▼
-                   Route Handlers (app/api/*)
-                            │
-                            ▼
-                   Vercel AI SDK (streamText,
-                   generateText + Output.object,
-                   embed, tools)
-                            │
-              ┌─────────────┴─────────────┐
-              ▼                           ▼
-         OpenAI API              Supabase Postgres
-      (gpt-4o-mini,              (tm_tasks +
-       text-embedding-3-small)    pgvector +
-                                  match_tm_tasks RPC)
+```mermaid
+flowchart TD
+    UI[Server + Client Components<br/>app/, features/]
+    Actions[Server Actions<br/>features/tasks/actions.ts]
+    Routes[Route Handlers<br/>app/api/*]
+    Store[(features/tasks/store.ts<br/>single data layer)]
+    SDK[Vercel AI SDK<br/>streamText / generateText / embed / tools]
+    OpenAI[OpenAI<br/>gpt-4o-mini + text-embedding-3-small]
+    DB[(Supabase Postgres<br/>tm_tasks + pgvector + match_tm_tasks)]
+
+    UI --> Actions
+    UI --> Routes
+    Actions --> Store
+    Routes --> Store
+    Routes --> SDK
+    SDK --> OpenAI
+    Store --> DB
 ```
 
-All data access flows through `features/tasks/store.ts`. Routes never touch Supabase directly.
+- All Supabase access is funneled through `features/tasks/store.ts`; route handlers and components never touch the client directly.
+- Structured-output logic lives in `features/ai/*.ts` as plain server functions, so Server Components (`/tasks/analysis`) can call it without an HTTP round-trip while route handlers reuse the same code.
+- `app/` is routing only; feature code lives under `features/{ai,chat,tasks}/` so each capability owns its types, components, and server logic.
+- Chat uses `useChat` + `DefaultChatTransport` on the client and exposes typed tools (`searchTasks`, `getTasks`, `createTask`, ...) on the server.
 
 ---
 
-## Setup
+## Notable engineering decisions
 
-### 1. Install
+### pgvector over a managed vector DB
+
+Tasks already live in Postgres, so adding the `vector` extension keeps embeddings, rows, and ACID guarantees in one store. No second system to provision, no eventual-consistency window between "task created" and "task searchable", and no extra network hop on every query. A managed vector DB would only pay off above a scale this app does not need.
+
+### ivfflat over HNSW for current scale
+
+The `tm_tasks` index uses `ivfflat (embedding vector_cosine_ops) with (lists = 100)`. ivfflat trains faster, uses less memory, and is well-suited to the small/medium row counts a personal task list produces. HNSW would give better recall under heavy load — a worthwhile switch later, but premature today.
+
+### Feature-sliced folder structure
+
+Code is grouped by capability (`features/ai/`, `features/chat/`, `features/tasks/`) instead of by technical layer (`components/`, `hooks/`, `lib/`). Each feature owns its types, server logic, and components, which keeps churn local and makes the boundary between "task domain" and "AI plumbing" obvious to anyone reading the repo.
+
+---
+
+## Run locally
 
 ```bash
+git clone https://github.com/stivenslop2/task-manager-ai
+cd task-manager-ai
 npm install
-cp .env.example .env.local
-# Fill in OPENAI_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY
+cp .env.example .env.local  # fill in keys
 npm run dev
 ```
 
-Then open http://localhost:3000.
+Open <http://localhost:3000>.
 
-### 2. Supabase schema
+Required environment variables:
 
-Enable the `vector` extension, create the tasks table, and create the similarity-search RPC:
-
-```sql
--- Enable pgvector (once per project)
-create extension if not exists vector;
-
--- Tasks table
-create table tm_tasks (
-  id           bigserial primary key,
-  title        text not null,
-  description  text not null default '',
-  completed    boolean not null default false,
-  embedding    vector(1536),
-  created_at   timestamptz not null default now()
-);
-
--- Approximate-nearest-neighbor index for cosine distance
-create index on tm_tasks using ivfflat (embedding vector_cosine_ops)
-  with (lists = 100);
-
--- Semantic search function used by the chat agent's `searchTasks` tool
-create or replace function match_tm_tasks (
-  query_embedding vector(1536),
-  match_threshold float,
-  match_count     int
-)
-returns table (
-  id          bigint,
-  title       text,
-  description text,
-  completed   boolean,
-  created_at  timestamptz,
-  similarity  float
-)
-language sql stable
-as $$
-  select
-    id, title, description, completed, created_at,
-    1 - (embedding <=> query_embedding) as similarity
-  from tm_tasks
-  where 1 - (embedding <=> query_embedding) > match_threshold
-  order by embedding <=> query_embedding
-  limit match_count;
-$$;
-```
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY` if swapping providers)
 
 ---
 
-## Scripts
+## What's next
 
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm start` | Run the production build |
-| `npm run lint` | Lint the project |
+- [ ] Deploy to Vercel (currently running on Railway staging)
+- [ ] Add Supabase Auth so tasks are scoped per user
+- [ ] Multi-modal task attachments (image OCR + summarization via the existing `app/api/analyze-image/route.ts` path)
 
 ---
 
-## Project layout
+## About
 
-```
-app/
-  layout.tsx, globals.css
-  page.tsx                          # Home (feature grid)
-  api/
-    describe-task/route.ts          # POST — streaming text
-    classify-task/route.ts          # POST — structured output (classification)
-    analyze-tasks/route.ts          # GET  — structured output (analysis)
-    chat/route.ts                   # POST — tool-calling chat agent
-  tasks/
-    page.tsx, loading.tsx, [id]/page.tsx
-    analysis/page.tsx               # Server Component consuming analyzeTasks()
+Built by **Julian Lopez** — AI Engineer · Full Stack.
+[Portfolio](https://julianlopez.dev) · [LinkedIn](https://www.linkedin.com/in/stiven-julian-lopez/) · [GitHub](https://github.com/stivenslop2)
 
-features/
-  tasks/
-    store.ts                        # Supabase data layer + semantic search
-    actions.ts                      # Server Actions (create, delete)
-    types.ts
-    components/*
-  ai/
-    analysis.ts                     # Structured-output analysis (reused by route + page)
-    prompts.ts                      # Prompt builders
-    stream.ts                       # SSE text-delta async iterator
-    components/AiStepsButton.tsx
-  chat/
-    components/Chat.tsx
-
-lib/
-  supabase.ts                       # Supabase client
-  embeddings.ts                     # OpenAI embedding helpers
-```
-
-Routes under `app/` are thin wrappers; feature logic lives in `features/<name>/`.
-
----
-
-## Environment variables
-
-| Name | Required | Purpose |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | ✅ | Chat, classification, analysis, embeddings, streaming steps |
-| `SUPABASE_URL` | ✅ | Supabase project URL |
-| `SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
-| `ANTHROPIC_API_KEY` | optional | Only if you swap the provider to `@ai-sdk/anthropic` |
-
----
-
-## License
-
-MIT
+License: MIT
