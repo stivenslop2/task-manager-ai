@@ -4,6 +4,7 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useRef, useEffect, useState } from 'react'
 import { ConfirmDialog } from '@/components/ui'
+import MarkdownMessage from './MarkdownMessage'
 
 const SUGGESTED_PROMPTS = [
   'Show me my pending tasks',
@@ -114,11 +115,14 @@ export default function Chat() {
             >
               {message.parts.map((part, i) => {
                 if (part.type === 'text') {
-                  return (
-                    <p key={i} className="whitespace-pre-wrap leading-relaxed">
-                      {part.text}
-                    </p>
-                  )
+                  if (message.role === 'user') {
+                    return (
+                      <p key={i} className="whitespace-pre-wrap leading-relaxed">
+                        {part.text}
+                      </p>
+                    )
+                  }
+                  return <MarkdownMessage key={i} text={part.text} />
                 }
 
                 if (part.type.startsWith('tool-') && 'state' in part) {
