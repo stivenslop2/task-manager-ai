@@ -2,7 +2,7 @@ const links = [
   { label: 'Portfolio', href: 'https://julianlopez.dev' },
   {
     label: 'LinkedIn',
-    href: 'https://www.linkedin.com/in/stiven-julian-lopez/',
+    href: 'https://www.linkedin.com/in/jstivenslopez/',
   },
   { label: 'GitHub', href: 'https://github.com/stivenslop2' },
   { label: 'Email', href: 'mailto:stivenslop@hotmail.com' },
