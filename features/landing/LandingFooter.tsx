@@ -1,5 +1,5 @@
 const links = [
-  { label: 'Portfolio', href: 'https://stivenslop-staging.up.railway.app' },
+  { label: 'Portfolio', href: 'https://stivenslop.up.railway.app' },
   {
     label: 'LinkedIn',
     href: 'https://www.linkedin.com/in/jstivenslopez/',
