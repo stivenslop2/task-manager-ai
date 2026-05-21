@@ -6,7 +6,7 @@ export function LandingHeader() {
           Task Manager <span className="text-brand-600">AI</span>
         </span>
         <a
-          href="https://julianlopez.dev"
+          href="https://stivenslop-staging.up.railway.app"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-brand-600"
         >
           <span aria-hidden>←</span>
