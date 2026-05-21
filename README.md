@@ -2,7 +2,7 @@
 
 > An AI-powered task manager with chat, classification, and semantic search.
 
-🔗 **[Live demo](https://task-manager-ai-staging.up.railway.app/)** · 📂 **[Portfolio](https://stivenslop-staging.up.railway.app)** · 💻 **[Source on GitHub](https://github.com/stivenslop2/task-manager-ai)**
+🔗 **[Live demo](https://task-manager-ai.up.railway.app/)** · 📂 **[Portfolio](https://stivenslop-staging.up.railway.app)** · 💻 **[Source on GitHub](https://github.com/stivenslop2/task-manager-ai)**
 
 ---
 
