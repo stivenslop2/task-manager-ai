@@ -99,9 +99,9 @@ Required environment variables:
 
 ## What's next
 
-- [ ] Deploy to Vercel (currently running on Railway staging)
 - [ ] Add Supabase Auth so tasks are scoped per user
 - [ ] Multi-modal task attachments (image OCR + summarization via the existing `app/api/analyze-image/route.ts` path)
+- [ ] Server-Sent Events for live task list updates across tabs
 
 ---
 
