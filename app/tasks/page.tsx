@@ -4,6 +4,8 @@ import TaskForm from '@/features/tasks/components/TaskForm'
 import TaskList from '@/features/tasks/components/TaskList'
 import TasksSkeleton from '@/features/tasks/components/TasksSkeleton'
 
+export const dynamic = 'force-dynamic'
+
 export default function TasksPage() {
   return (
     <div className="space-y-8">

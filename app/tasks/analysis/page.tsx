@@ -1,6 +1,8 @@
 import { analyzeTasks } from '@/features/ai/analysis'
 import { Card } from '@/components/ui'
 
+export const dynamic = 'force-dynamic'
+
 export default async function TaskAnalysisPage() {
   const analysis = await analyzeTasks()
 
